@@ -39,8 +39,9 @@ flowchart TD
 | `optimizer.v` | `Optimizer` sum type:`SGD`、`Adam`(偏差校正矩估计) |
 | `data.v` | `Dataset` + `DataLoader`(打乱、mini-batch、take_axis 取批) |
 | `vision.v` | `load_image`(stbi 解码 PNG/JPEG → NHWC [0,1])、`stack_images`、`resize_nearest` |
+| `checkpoint.v` | 预训练 checkpoint 加载:safetensors 头解析(键/形状清单)、`LoadRule` 名称映射、PyTorch 布局转换(`torch_conv_rule` perm [0,2,3,1]、`torch_linear_rule` perm [1,0])、1-D 偏置自动 reshape |
 | `metrics.v` | 深度指标 `depth_metrics`、边缘指标 `edge_metrics`(F1 阈值扫描) |
-| `sequential.v` | `Sequential`:`forward`/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`set_training` |
+| `sequential.v` | `Sequential`:`forward`/`forward_taps`(中间层输出)/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training` |
 | `nn_test.v` | 有限差分梯度校验(Conv2d/Linear)、形状与梯度守恒冒烟测试 |
 
 ## 用法
@@ -72,6 +73,19 @@ net.set_training(false)
 pred := net.predict(test_x)
 println(nn.edge_metrics(pred, test_y))
 
+// 加载 PyTorch 风格预训练 checkpoint(名称映射 + NCHW→NHWC 布局转换)
+mut ckpt := nn.open_checkpoint('vgg16.safetensors')
+defer { ckpt.close() }
+println(ckpt.keys())  // 检查可用张量名
+net.load_checkpoint(ckpt, [
+	nn.torch_conv_rule('features.0.weight', 'layers.0.w'),
+	nn.plain_rule('features.0.bias', 'layers.0.b'),
+	// ...
+])
+
+// HED/FPN 风格的中间层输出
+taps := net.forward_taps(x, [4, 9, 13])
+
 // 权重持久化
 net.save('model.safetensors')
 net.load('model.safetensors')
@@ -98,4 +112,5 @@ v test .                    # 有限差分梯度校验 + 形状冒烟
 - [x] 图像数据管线(stbi 解码、mini-batch DataLoader)
 - [x] Pooling/Upsample/Norm/Dropout + train/eval 模式
 - [x] Residual/Skip 容器、视觉损失库、深度/边缘指标
-- [ ] 预训练骨干加载(HF safetensors 名称映射, MiDaS/DPT/HED 风格架构)
+- [x] 预训练 checkpoint 加载:safetensors 头解析、LoadRule 名称映射、PyTorch 布局转换(examples/pretrained 逐位一致验证)
+- [ ] 开箱即用的骨干架构预设(VGG16/HED 积木 + 公开权重命名表)

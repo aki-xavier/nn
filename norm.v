@@ -71,8 +71,8 @@ pub fn (mut l LayerNorm) save_params(m mlx.MapStringToArray, prefix string) {
 }
 
 pub fn (mut l LayerNorm) load_params(m mlx.MapStringToArray, prefix string) {
-	l.w = m.get('${prefix}.w')
-	l.b = m.get('${prefix}.b')
+	l.w = reshape_to(m.get('${prefix}.w'), [l.channels], '${prefix}.w')
+	l.b = reshape_to(m.get('${prefix}.b'), [l.channels], '${prefix}.b')
 	l.w.eval()
 	l.b.eval()
 }
@@ -166,10 +166,11 @@ pub fn (mut l BatchNorm2d) save_params(m mlx.MapStringToArray, prefix string) {
 }
 
 pub fn (mut l BatchNorm2d) load_params(m mlx.MapStringToArray, prefix string) {
-	l.w = m.get('${prefix}.w')
-	l.b = m.get('${prefix}.b')
-	l.running_mu = m.get('${prefix}.running_mu')
-	l.running_var = m.get('${prefix}.running_var')
+	shape := [1, 1, 1, l.channels]
+	l.w = reshape_to(m.get('${prefix}.w'), shape, '${prefix}.w')
+	l.b = reshape_to(m.get('${prefix}.b'), shape, '${prefix}.b')
+	l.running_mu = reshape_to(m.get('${prefix}.running_mu'), shape, '${prefix}.running_mu')
+	l.running_var = reshape_to(m.get('${prefix}.running_var'), shape, '${prefix}.running_var')
 	l.w.eval()
 	l.b.eval()
 	l.running_mu.eval()

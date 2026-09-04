@@ -111,6 +111,58 @@ fn test_container_shapes() {
 	assert dx2.shape() == [1, 8, 8, 4]
 }
 
+fn test_checkpoint_loading() {
+	// fabricate a torch-convention checkpoint: conv 2->3, weight NCHW [3,2,3,3]
+	w_torch := mlx.array_f32([]f32{len: 3 * 2 * 3 * 3, init: f32((index * 7) % 13) / 12.0 - 0.5}, [
+		3,
+		2,
+		3,
+		3,
+	])
+	b := mlx.array_f32([f32(0.1), -0.2, 0.3], [3])
+	m := mlx.new_map_string_to_array()
+	m.insert('features.0.weight', w_torch)
+	m.insert('features.0.bias', b)
+	meta := mlx.new_map_string_to_string()
+	path := '/tmp/nn_test_ckpt.safetensors'
+	mlx.save_safetensors(path, m, meta)
+	m.free()
+	meta.free()
+
+	mut ckpt := open_checkpoint(path)
+	defer {
+		ckpt.close()
+	}
+	assert ckpt.has('features.0.weight')
+	assert !ckpt.has('nope')
+	assert ckpt.shape_of('features.0.weight') == [3, 2, 3, 3]
+	assert ckpt.keys().len == 2
+
+	// perm converts NCHW -> NHWC-weight layout
+	t := ckpt.tensor('features.0.weight', [0, 2, 3, 1])
+	assert t.shape() == [3, 3, 3, 2]
+	// t[o, i, j, ci] == w_torch[o, ci, i, j]
+	assert t.data_f32()[0] == w_torch.data_f32()[0]
+
+	mut net := Sequential{}
+	net.add(new_conv2d(2, 3, 3, 1, 1, 0))
+	net.load_checkpoint(ckpt, [
+		torch_conv_rule('features.0.weight', 'layers.0.w'),
+		plain_rule('features.0.bias', 'layers.0.b'),
+	])
+	// reference: conv with manually permuted weight
+	x := mlx.array_f32([]f32{len: 1 * 5 * 5 * 2, init: f32((index * 11) % 7) / 6.0}, [
+		1,
+		5,
+		5,
+		2,
+	])
+	w_ref := w_torch.transpose_axes([0, 2, 3, 1])
+	ref := mlx.conv2d(x, w_ref, 1, 1, 1).add(b.reshape([1, 1, 1, 3]))
+	pred := net.predict(x)
+	assert pred.subtract(ref).abs().max().item_f32() < 1e-5
+}
+
 fn test_norm_dropout_smoke() {
 	mut ln := Layer(new_layer_norm(4))
 	x := mlx.array_f32([]f32{len: 2 * 2 * 2 * 4, init: f32((index * 17) % 9) / 8.0}, [

@@ -88,10 +88,9 @@ pub fn (mut l Conv2d) save_params(m mlx.MapStringToArray, prefix string) {
 }
 
 pub fn (mut l Conv2d) load_params(m mlx.MapStringToArray, prefix string) {
-	l.w = m.get('${prefix}.w')
-	l.b = m.get('${prefix}.b')
-	// safetensors arrays are lazy Load primitives bound to the CPU stream;
-	// materialise them so later GPU ops read real data.
+	want_w := [l.out_channels, l.kernel_size, l.kernel_size, l.in_channels]
+	l.w = reshape_to(m.get('${prefix}.w'), want_w, '${prefix}.w (NHWC layout; PyTorch checkpoints need perm [0, 2, 3, 1])')
+	l.b = reshape_to(m.get('${prefix}.b'), [1, 1, 1, l.out_channels], '${prefix}.b')
 	l.w.eval()
 	l.b.eval()
 }

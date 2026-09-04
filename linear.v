@@ -68,10 +68,8 @@ pub fn (mut l Linear) save_params(m mlx.MapStringToArray, prefix string) {
 }
 
 pub fn (mut l Linear) load_params(m mlx.MapStringToArray, prefix string) {
-	l.w = m.get('${prefix}.w')
-	l.b = m.get('${prefix}.b')
-	// safetensors arrays are lazy Load primitives bound to the CPU stream;
-	// materialise them so later GPU ops read real data.
+	l.w = reshape_to(m.get('${prefix}.w'), [l.in_features, l.out_features], '${prefix}.w (PyTorch linear weights need perm [1, 0])')
+	l.b = reshape_to(m.get('${prefix}.b'), [1, l.out_features], '${prefix}.b')
 	l.w.eval()
 	l.b.eval()
 }

@@ -106,9 +106,45 @@ pub fn (mut net Sequential) save(path string) {
 // must already have the same architecture as the saved one.
 pub fn (mut net Sequential) load(path string) {
 	m, meta := mlx.load_safetensors(path)
+	net.load_map(m)
+	m.free()
+	meta.free()
+}
+
+// load_map restores all layer parameters from an open tensor map using the
+// internal key convention (`layers.{i}.w` / `.b` / ...).
+pub fn (mut net Sequential) load_map(m mlx.MapStringToArray) {
 	for i, mut l in net.layers {
 		l.load_params(m, 'layers.${i}')
 	}
-	m.free()
-	meta.free()
+}
+
+// load_checkpoint loads parameters from an external checkpoint according to
+// `rules` (name mapping + optional layout permutation), then validates the
+// result.  Unknown checkpoint names panic with the list of available keys;
+// shape mismatches panic with expected/got shapes.
+pub fn (mut net Sequential) load_checkpoint(ckpt Checkpoint, rules []LoadRule) {
+	mapped := mlx.new_map_string_to_array()
+	defer {
+		mapped.free()
+	}
+	for rule in rules {
+		mapped.insert(rule.to, ckpt.tensor(rule.from, rule.perm))
+	}
+	net.load_map(mapped)
+}
+
+// forward_taps runs the network and returns the outputs right after each
+// layer index in `taps` — side outputs for HED-style edge detection and
+// FPN-style multi-scale features.
+pub fn (mut net Sequential) forward_taps(x mlx.Array, taps []int) []mlx.Array {
+	mut out := x
+	mut res := []mlx.Array{}
+	for i, mut l in net.layers {
+		out = l.forward(out)
+		if i in taps {
+			res << out
+		}
+	}
+	return res
 }
