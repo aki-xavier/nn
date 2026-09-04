@@ -219,3 +219,6 @@ __marimo__/
 .v2c
 .DS_Store
 *.v3cc.*
+# BSDS500 dataset and training artifacts
+data/
+*.safetensors

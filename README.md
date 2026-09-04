@@ -38,7 +38,7 @@ flowchart TD
 | `loss.v` | `Loss` sum type:MSE / SoftmaxCE / L1 / BerHu / ScaleInvariant / WeightedBCE |
 | `optimizer.v` | `Optimizer` sum type:`SGD`、`Adam`(偏差校正矩估计) |
 | `data.v` | `Dataset` + `DataLoader`(打乱、mini-batch、take_axis 取批) |
-| `vision.v` | `load_image`(stbi 解码 PNG/JPEG → NHWC [0,1])、`stack_images`、`resize_nearest` |
+| `vision.v` | `load_image`(stbi 解码 PNG/JPEG → NHWC [0,1])、`save_image`(PNG 输出)、`stack_images`、`resize_nearest`、`flip_horizontal`(水平翻转增强) |
 | `checkpoint.v` | 预训练 checkpoint 加载:safetensors 头解析(键/形状清单)、`LoadRule` 名称映射、PyTorch 布局转换(`torch_conv_rule` perm [0,2,3,1]、`torch_linear_rule` perm [1,0])、1-D 偏置自动 reshape |
 | `metrics.v` | 深度指标 `depth_metrics`、边缘指标 `edge_metrics`(F1 阈值扫描) |
 | `sequential.v` | `Sequential`:`forward`/`forward_taps`(中间层输出)/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training` |
@@ -96,8 +96,19 @@ net.load('model.safetensors')
 ```sh
 v run examples/xor          # MLP 学 XOR:loss 0.28 -> 2e-4,权重保存/重载一致
 v run examples/edge_filter  # CNN 学 Sobel 边缘:边缘 F1 0.22 -> 0.97
+v run examples/pretrained   # PyTorch 风格 checkpoint 加载,逐位一致
+v run examples/bsds_hed     # 真实任务:BSDS500 边缘似然估计(见下)
 v test .                    # 有限差分梯度校验 + 形状冒烟
 ```
+
+## 真实任务示例:BSDS500 边缘似然估计
+
+`examples/bsds_hed` 用两级 U-Net(`Skip` 容器嵌套)+ `WeightedBCELoss` 在 BSDS500 上从零训练:
+
+- 数据:BDS500 原图(stbi 读 JPG)+ 多标注者边界均值作软标签(.mat 一次性转 .npy,`mlx.load` 直读);横竖版混合的图统一 `resize_nearest` 到 240×320;水平翻转增强(仅训练集)。
+- 训练:Adam(lr 3e-3)、w_pos=12、batch 4、40 epoch,Metal GPU 上约 15 分钟。
+- 结果:val(24 张)F1@0.5 从 0.003 → ~0.08-0.10,bestF1 ~0.17-0.20(无 NMS 的粗指标;HED 论文用预训练 VGG + 多尺度融合为 0.78 ODS)。预测边缘图存到 `data/predictions/` 可目视检查:主体轮廓(人物、车辆、建筑)清晰可辨。
+- 数据集不入库:`data/` 和 `*.safetensors` 已 gitignore;重放请下载 [BIDS/BSDS500](https://github.com/BIDS/BSDS500) 并运行标注转换(见 examples/bsds_hed 源码注释)。
 
 ## 已知约束(当前 V 0.5.2)
 
