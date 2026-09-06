@@ -112,6 +112,7 @@ v run examples/edge_filter  # CNN 学 Sobel 边缘:边缘 F1 0.22 -> 0.97
 v run examples/pretrained   # PyTorch 风格 checkpoint 加载,逐位一致
 v run examples/clifford   # 标量/rotor/motor 复合层训练 + 保存/加载回放
 v run examples/cga        # 共形变换反演(Cl4,1 群层 + 自由 CGA 层),loss -> 8e-4
+v run examples/compare    # 群层混合 vs 全自由层对比(见下)
 v run examples/bsds_hed     # 真实任务:BSDS500 边缘似然估计(见下)
 v test .                    # 有限差分梯度校验 + 形状冒烟
 ```
@@ -125,8 +126,18 @@ v test .                    # 有限差分梯度校验 + 形状冒烟
 - 结果:val(24 张)F1@0.5 从 0.003 → ~0.08-0.10,bestF1 ~0.17-0.20(无 NMS 的粗指标;HED 论文用预训练 VGG + 多尺度融合为 0.78 ODS)。预测边缘图存到 `data/predictions/` 可目视检查:主体轮廓(人物、车辆、建筑)清晰可辨。
 - 数据集不入库:`data/` 和 `*.safetensors` 已 gitignore;重放请下载 [BIDS/BSDS500](https://github.com/BIDS/BSDS500) 并运行标注转换(见 examples/bsds_hed 源码注释)。
 
-## 已知约束(当前 V 0.5.2)
+## 群层 vs 自由层对比实验(examples/compare)
 
+在共形变换反演任务上,同参数量(851 vs 841)对比「有界 CGA 群层混合」(CliffordLinear + CGAGroupLayer)与「纯自由层」(三层 CliffordLinear)。4 个种子、加大变换范围(旋转 ±1.4、平移 ±0.8、缩放 0.4–2.0),结果:
+
+| 网络 | mean 最终误差 | mean max|grad| | 结论 |
+| --- | --- | --- | --- |
+| A 群层混合 | 0.154 | 1.77 | 每个样本变换不同 → 共享群层无法逐样本专用化,容量被抽走 |
+| B 纯自由 | **0.082** | 1.55 | 自由容量直接记忆样本级逆映射,更好 |
+
+结论:群层的价值依赖「任务群匹配」(全体样本共享同一变换群,等变性才有意义);**每样本独立变换、无共享对称性**的任务上,纯自由层占优。这与此前文献结论一致,且本实验可复现。
+
+## 已知约束(当前 V 0.5.2)
 - 本版本 V 编译器存在解析 bug(已报 [vlang/v#28339](https://github.com/vlang/v/issues/28339)):**入口 `module main` 文件里不能声明任何方法**,否则 import 含 C 指令的模块(mlx)时报 `expecting type declaration`。逻辑全部写在 `module nn`(被 import 的依赖模块)里即可完全规避;框架内部因此用 sum type + match 代替 interface,方法统一 `mut` 接收者。新增层类型时在 `layer.v` 的 sum type 和各 match 分支注册。
 - safetensors 惰性加载在 GPU 上未实现;mlx-v 的 load 已固定在 CPU stream 上物化,对调用方透明。
 - 若编译时偶发 `v3 compiler memory usage ...` 报错,加 `-no-memory-limit` 重试。

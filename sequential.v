@@ -176,6 +176,17 @@ pub fn (mut net Sequential) to_float32() {
 	net.to_dtype(.float32)
 }
 
+// param_count returns the total number of trainable parameters.
+pub fn (mut net Sequential) param_count() int {
+	mut total := 0
+	for mut l in net.layers {
+		for p in l.params() {
+			total += int(p.size())
+		}
+	}
+	return total
+}
+
 // forward_taps runs the network and returns the outputs right after each
 // layer index in `taps` — side outputs for HED-style edge detection and
 // FPN-style multi-scale features.
