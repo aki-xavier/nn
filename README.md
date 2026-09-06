@@ -41,7 +41,8 @@ flowchart TD
 | `vision.v` | `load_image`(stbi 解码 PNG/JPEG → NHWC [0,1])、`save_image`(PNG 输出)、`stack_images`、`resize_nearest`、`flip_horizontal`(水平翻转增强) |
 | `checkpoint.v` | 预训练 checkpoint 加载:safetensors 头解析(键/形状清单)、`LoadRule` 名称映射、PyTorch 布局转换(`torch_conv_rule` perm [0,2,3,1]、`torch_linear_rule` perm [1,0])、1-D 偏置自动 reshape |
 | `metrics.v` | 深度指标 `depth_metrics`、边缘指标 `edge_metrics`(F1 阈值扫描) |
-| `sequential.v` | `Sequential`:`forward`/`forward_taps`/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training`/`use_scheduler`/`grad 范数日志`/`to_dtype` |
+| `sequential.v` | `Sequential`:`forward`/`forward_taps`/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training`/`use_scheduler`/`grad 范数日志`/`to_dtype`/`compile`(见 `compiled.v`) |
+| `compiled.v` | `Sequential.compile()`:mlx 图编译推理加速。顶层 trampoline 经 mlx-v 的 `PayloadPair` payload 槽携带网络指针(绕过 Func 不可捕获限制,无需在 trampoline 复刻层数学),`CompiledNet.apply` 与 eager 输出一致(<1e-4) |
 | `module.v` | `Module` 组合容器:`add`、`named_parameters()`(点分名)、嵌套 + 协议递归 |
 | `sequence.v` | `Attention`(多头自注意力,可选因果掩码)、`LSTM`(vjp trampoline 反向) |
 | `conv1d3d.v` | `Conv1d`/`Conv3d` 层(vjp 反向,同 Conv2d 模式) |

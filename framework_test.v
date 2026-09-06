@@ -198,6 +198,38 @@ fn test_half_dtype_conversion() {
 	assert net.layers[0].params()[0].dtype() == .float32
 }
 
+fn test_compile_smoke() {
+	// MLP compiled graph must reproduce the eager output
+	mut net := Sequential{}
+	net.add(new_linear(4, 8, 3))
+	net.add(Tanh{})
+	net.add(new_linear(8, 2, 4))
+	x := mlx.array_f32([f32(0.5), -0.3, 0.8, 0.1, 1.2, -0.7, 0.4, 0.9], [2, 4])
+	eager := net.predict(x)
+	mut comp := net.compile()
+	compiled := comp.apply(x)
+	assert compiled.shape() == eager.shape()
+	d := compiled.subtract(eager).abs().max().item_f32()
+	assert d < 1e-4, 'compiled vs eager drifted ${d}'
+
+	// a conv net compiles too (graph through the vjp-free forward path)
+	mut cnet := Sequential{}
+	cnet.add(new_conv2d(1, 4, 3, 1, 1, 5))
+	cnet.add(ReLU{})
+	cnet.add(new_conv2d(4, 1, 3, 1, 1, 6))
+	x2 := mlx.array_f32([]f32{len: 1 * 8 * 8 * 1, init: f32((index * 13) % 7) / 6.0 - 0.4}, [
+		1,
+		8,
+		8,
+		1,
+	])
+	e2 := cnet.predict(x2)
+	mut c2 := cnet.compile()
+	out2 := c2.apply(x2)
+	assert out2.shape() == e2.shape()
+	assert out2.subtract(e2).abs().max().item_f32() < 1e-4
+}
+
 fn test_backbone_presets_smoke() {
 	mut vgg := vgg16_lite(10, 1)
 	vgg.set_training(false)
