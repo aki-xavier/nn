@@ -50,7 +50,9 @@ flowchart TD
 | `gradstats.v` | 全局梯度范数 + 裁剪系数(集成进 SGD/Adam 的 `clip_norm`) |
 | `backbones.v` | 架构预设:`vgg16_lite`、`resnet18_lite`、`hed_unet` |
 | `optimizer.v` | `Optimizer`:`SGD`/`Adam`(偏差校正、`clip_norm` 裁剪)、`LRScheduler`(`StepLR`/`CosineLR`)、Adam 状态 save/load |
-| `clifford.v` | 标量/rotor/motor 表示竞技场:`CliffordLinear`(自由 multivector 线性层)、`GroupLayer`(指数映射参数化的单位 rotor/motor 共轭层)、`ReprSwitch`(表示间保值嵌入);统一乘法表驱动,`repr` 字段切换维度 1/4/8 |
+| `clifford.v` | 标量/rotor/motor **cga(Cl(4,1), 32 维)** 表示竞技场:`CliffordLinear`(自由 multivector 线性层)、`GroupLayer`(指数映射参数化的单位 rotor/motor 共轭层)、`ReprSwitch`(表示间保值嵌入);统一乘法表驱动,`repr` 字段切换维度 1/4/8/32 |
+| `cga_engine.v` | 通用 Cl(p,q) 引擎:blade 乘积(位掩码 + 度量签名)生成结构常数表;CGA 点嵌入 `conformal_point_pub`/`extract_conformal_pub`(λ = x[16]−x[8]) |
+| `cga.v` | `CGAGroupLayer`:共形群层(bivector 10 维 exp-map,两分支 cosh/cos,**缩放生成元裁剪到 ±log(max_scale)**);构建器 `cga_translation/rotation/dilation_params` |
 | `motor.v` | `MotorGroupLayer`:写死 SE(3) 的生产版 group 层——原始四元数归一化参数化(无指数映射奇异性),**解析梯度**(无 vjp/乘法表),点作用 `1+εP ↦ 1+ε(RP+t)` |
 | `nn_test.v` | 有限差分梯度校验(Conv2d/Linear)、形状与梯度守恒冒烟测试 |
 | `clifford_test.v` | Clifford 乘法表(四元数/对偶四元数)、CliffordLinear 有限差分梯度、rotor 旋转与 motor 点作用几何正确性、ReprSwitch 数量保真 |
@@ -109,6 +111,7 @@ v run examples/xor          # MLP 学 XOR:loss 0.28 -> 2e-4,权重保存/重载�
 v run examples/edge_filter  # CNN 学 Sobel 边缘:边缘 F1 0.22 -> 0.97
 v run examples/pretrained   # PyTorch 风格 checkpoint 加载,逐位一致
 v run examples/clifford   # 标量/rotor/motor 复合层训练 + 保存/加载回放
+v run examples/cga        # 共形变换反演(Cl4,1 群层 + 自由 CGA 层),loss -> 8e-4
 v run examples/bsds_hed     # 真实任务:BSDS500 边缘似然估计(见下)
 v test .                    # 有限差分梯度校验 + 形状冒烟
 ```
