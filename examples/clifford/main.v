@@ -60,7 +60,7 @@ fn main() {
 	// information-carrying dual components must stay in the main path.)
 	mut net := nn.Sequential{}
 	net.add(nn.new_clifford_linear(.motor, 1, 2, 31))
-	net.add(nn.new_group_layer(.motor))
+	net.add(nn.new_motor_group_layer())
 	net.add(nn.Flatten{})
 	net.add(nn.new_linear(16, 3, 32))
 
@@ -79,7 +79,7 @@ fn main() {
 	net.save('clifford_demo.safetensors')
 	mut net2 := nn.Sequential{}
 	net2.add(nn.new_clifford_linear(.motor, 1, 2, 0))
-	net2.add(nn.new_group_layer(.motor))
+	net2.add(nn.new_motor_group_layer())
 	net2.add(nn.Flatten{})
 	net2.add(nn.new_linear(16, 3, 0))
 	net2.set_training(false)

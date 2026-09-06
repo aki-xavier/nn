@@ -26,6 +26,7 @@ pub type Layer = AvgPool2d
 	| LayerNorm
 	| Linear
 	| MaxPool2d
+	| MotorGroupLayer
 	| ReLU
 	| ReprSwitch
 	| Residual
@@ -91,6 +92,9 @@ pub fn (mut l Layer) forward(x mlx.Array) mlx.Array {
 		ReprSwitch {
 			return l.forward(x)
 		}
+		MotorGroupLayer {
+			return l.forward(x)
+		}
 	}
 }
 
@@ -152,6 +156,9 @@ pub fn (mut l Layer) backward(grad mlx.Array) mlx.Array {
 		ReprSwitch {
 			return l.backward(grad)
 		}
+		MotorGroupLayer {
+			return l.backward(grad)
+		}
 	}
 }
 
@@ -210,6 +217,9 @@ pub fn (mut l Layer) params() []mlx.Array {
 			return l.params()
 		}
 		ReprSwitch {
+			return l.params()
+		}
+		MotorGroupLayer {
 			return l.params()
 		}
 	}
@@ -273,6 +283,9 @@ pub fn (mut l Layer) grads() []mlx.Array {
 		ReprSwitch {
 			return l.grads()
 		}
+		MotorGroupLayer {
+			return l.grads()
+		}
 	}
 }
 
@@ -297,6 +310,7 @@ pub fn (mut l Layer) set_params(ps []mlx.Array) {
 		CliffordLinear { l.set_params(ps) }
 		GroupLayer { l.set_params(ps) }
 		ReprSwitch { l.set_params(ps) }
+		MotorGroupLayer { l.set_params(ps) }
 	}
 }
 
@@ -322,6 +336,7 @@ pub fn (mut l Layer) set_training(training bool) {
 		CliffordLinear { l.set_training(training) }
 		GroupLayer { l.set_training(training) }
 		ReprSwitch { l.set_training(training) }
+		MotorGroupLayer { l.set_training(training) }
 	}
 }
 
@@ -346,6 +361,7 @@ pub fn (mut l Layer) save_params(m mlx.MapStringToArray, prefix string) {
 		CliffordLinear { l.save_params(m, prefix) }
 		GroupLayer { l.save_params(m, prefix) }
 		ReprSwitch { l.save_params(m, prefix) }
+		MotorGroupLayer { l.save_params(m, prefix) }
 	}
 }
 
@@ -370,5 +386,6 @@ pub fn (mut l Layer) load_params(m mlx.MapStringToArray, prefix string) {
 		CliffordLinear { l.load_params(m, prefix) }
 		GroupLayer { l.load_params(m, prefix) }
 		ReprSwitch { l.load_params(m, prefix) }
+		MotorGroupLayer { l.load_params(m, prefix) }
 	}
 }
