@@ -5,8 +5,12 @@ import mlx
 // sequential.v — a stack of layers executed in order.
 
 pub struct Sequential {
+pub mut:
+	last_grad_norm f32 // L2 global grad norm recorded by the last train_step
 mut:
-	layers []Layer
+	layers    []Layer
+	scheduler LRScheduler = StepLR{ lr: 0, step_size: 1 }
+	has_sched bool
 }
 
 // add appends a layer to the end of the stack.
@@ -61,14 +65,22 @@ pub fn (mut net Sequential) set_training(training bool) {
 }
 
 // train_step runs one forward/backward/update cycle and returns the loss.
+// `last_grad_norm` records the pre-clip global gradient norm.
 pub fn (mut net Sequential) train_step(x mlx.Array, y mlx.Array, mut criterion Loss, mut opt Optimizer) f32 {
 	pred := net.forward(x)
 	l := criterion.loss(pred, y)
 	loss_v := l.item_f32()
 	g := criterion.gradient(pred, y)
 	net.backward(g)
+	net.last_grad_norm = opt.grad_norm(mut net.layers)
 	opt.step(mut net.layers)
 	return loss_v
+}
+
+// use_scheduler attaches an LR scheduler, applied at the start of every epoch.
+pub fn (mut net Sequential) use_scheduler(mut sched LRScheduler) {
+	net.scheduler = sched
+	net.has_sched = true
 }
 
 // fit_loader trains with mini-batches from a DataLoader, printing the mean
@@ -76,6 +88,9 @@ pub fn (mut net Sequential) train_step(x mlx.Array, y mlx.Array, mut criterion L
 pub fn (mut net Sequential) fit_loader(mut dl DataLoader, mut criterion Loss, mut opt Optimizer, epochs int, log_every int) {
 	net.set_training(true)
 	for epoch in 1 .. epochs + 1 {
+		if net.has_sched {
+			opt.schedule(epoch - 1, mut net.scheduler)
+		}
 		dl.reset()
 		mut total := f32(0)
 		mut batches := 0
@@ -85,7 +100,7 @@ pub fn (mut net Sequential) fit_loader(mut dl DataLoader, mut criterion Loss, mu
 			batches++
 		}
 		if log_every > 0 && (epoch == 1 || epoch % log_every == 0) {
-			println('epoch ${epoch:5d}  loss = ${total / f32(batches):.6f}')
+			println('epoch ${epoch:5d}  loss = ${total / f32(batches):.6f}  |grad| = ${net.last_grad_norm:.4f}')
 		}
 	}
 }
@@ -132,6 +147,33 @@ pub fn (mut net Sequential) load_checkpoint(ckpt Checkpoint, rules []LoadRule) {
 		mapped.insert(rule.to, ckpt.tensor(rule.from, rule.perm))
 	}
 	net.load_map(mapped)
+}
+
+// to_dtype converts all trainable parameters to `dt` (e.g. half-precision
+// weights for inference).  Non-trainable state (BatchNorm running stats)
+// stays in float32.
+pub fn (mut net Sequential) to_dtype(dt mlx.Dtype) {
+	for mut l in net.layers {
+		ps := l.params()
+		if ps.len == 0 {
+			continue
+		}
+		mut np := []mlx.Array{cap: ps.len}
+		for p in ps {
+			np << p.astype(dt)
+		}
+		l.set_params(np)
+	}
+}
+
+// half converts trainable parameters to float16.
+pub fn (mut net Sequential) half() {
+	net.to_dtype(.float16)
+}
+
+// to_float32 converts trainable parameters back to float32.
+pub fn (mut net Sequential) to_float32() {
+	net.to_dtype(.float32)
 }
 
 // forward_taps runs the network and returns the outputs right after each

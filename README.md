@@ -1,6 +1,6 @@
 # nn
 
-基于 [mlx-v](../mlx-v)(Apple MLX 的 V 语言绑定)搭建的最小神经网络训练与推理框架,纯 V 面向对象实现,支持稠密(MPL)与视觉(CNN)任务,权重用 safetensors 格式持久化。
+> **定位**:构建在 mlx-v 之上的**通用神经网络框架**。核心只提供与任务无关的设施:层协议(Layer sum type 的 `params/grads/set_params/forward/backward`)、优化器协议(SGD/Adam/LR 调度/梯度裁剪)、训练循环(`fit/fit_loader/train_step`)、持久化(safetensors/checkpoint 名称映射)、数据迭代(`Dataset/DataLoader`)与组合容器(`Sequential/Module/Residual/Skip`)。视觉/深度/边缘能力(vision/metrics/backbones/examples)以可选扩展形式存在,不污染内核。
 
 反向传播采用混合策略:简单层(Linear、激活、池化)手写解析梯度,复杂层(Conv2d、LayerNorm、BatchNorm2d)通过 MLX 自动微分(`vjp`)求梯度——每类层配一个顶层 trampoline 函数绕过"闭包不能捕获实例"的 C ABI 限制。
 
@@ -41,7 +41,14 @@ flowchart TD
 | `vision.v` | `load_image`(stbi 解码 PNG/JPEG → NHWC [0,1])、`save_image`(PNG 输出)、`stack_images`、`resize_nearest`、`flip_horizontal`(水平翻转增强) |
 | `checkpoint.v` | 预训练 checkpoint 加载:safetensors 头解析(键/形状清单)、`LoadRule` 名称映射、PyTorch 布局转换(`torch_conv_rule` perm [0,2,3,1]、`torch_linear_rule` perm [1,0])、1-D 偏置自动 reshape |
 | `metrics.v` | 深度指标 `depth_metrics`、边缘指标 `edge_metrics`(F1 阈值扫描) |
-| `sequential.v` | `Sequential`:`forward`/`forward_taps`(中间层输出)/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training` |
+| `sequential.v` | `Sequential`:`forward`/`forward_taps`/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training`/`use_scheduler`/`grad 范数日志`/`to_dtype` |
+| `module.v` | `Module` 组合容器:`add`、`named_parameters()`(点分名)、嵌套 + 协议递归 |
+| `sequence.v` | `Attention`(多头自注意力,可选因果掩码)、`LSTM`(vjp trampoline 反向) |
+| `conv1d3d.v` | `Conv1d`/`Conv3d` 层(vjp 反向,同 Conv2d 模式) |
+| `groupnorm.v` | `GroupNorm`(分组归一,vjp 反向) |
+| `gradstats.v` | 全局梯度范数 + 裁剪系数(集成进 SGD/Adam 的 `clip_norm`) |
+| `backbones.v` | 架构预设:`vgg16_lite`、`resnet18_lite`、`hed_unet` |
+| `optimizer.v` | `Optimizer`:`SGD`/`Adam`(偏差校正、`clip_norm` 裁剪)、`LRScheduler`(`StepLR`/`CosineLR`)、Adam 状态 save/load |
 | `clifford.v` | 标量/rotor/motor 表示竞技场:`CliffordLinear`(自由 multivector 线性层)、`GroupLayer`(指数映射参数化的单位 rotor/motor 共轭层)、`ReprSwitch`(表示间保值嵌入);统一乘法表驱动,`repr` 字段切换维度 1/4/8 |
 | `motor.v` | `MotorGroupLayer`:写死 SE(3) 的生产版 group 层——原始四元数归一化参数化(无指数映射奇异性),**解析梯度**(无 vjp/乘法表),点作用 `1+εP ↦ 1+ε(RP+t)` |
 | `nn_test.v` | 有限差分梯度校验(Conv2d/Linear)、形状与梯度守恒冒烟测试 |
