@@ -69,7 +69,6 @@ fn main() {
 	net.add(nn.Flatten{})
 	net.add(nn.new_linear(64, 9, 32))
 
-	println('ds.x ${ds.x.shape()} ds.y ${ds.y.shape()}')
 	mut dl := nn.new_dataloader(ds, 16, true)
 	mut mse := nn.Loss(nn.MSELoss{})
 	mut opt := nn.Optimizer(nn.Adam{
