@@ -42,7 +42,9 @@ flowchart TD
 | `checkpoint.v` | 预训练 checkpoint 加载:safetensors 头解析(键/形状清单)、`LoadRule` 名称映射、PyTorch 布局转换(`torch_conv_rule` perm [0,2,3,1]、`torch_linear_rule` perm [1,0])、1-D 偏置自动 reshape |
 | `metrics.v` | 深度指标 `depth_metrics`、边缘指标 `edge_metrics`(F1 阈值扫描) |
 | `sequential.v` | `Sequential`:`forward`/`forward_taps`(中间层输出)/`backward`/`fit`/`fit_loader`/`train_step`/`predict`/`save`/`load`/`load_map`/`load_checkpoint`/`set_training` |
+| `clifford.v` | 标量/rotor/motor 表示竞技场:`CliffordLinear`(自由 multivector 线性层)、`GroupLayer`(指数映射参数化的单位 rotor/motor 共轭层)、`ReprSwitch`(表示间保值嵌入);统一乘法表驱动,`repr` 字段切换维度 1/4/8 |
 | `nn_test.v` | 有限差分梯度校验(Conv2d/Linear)、形状与梯度守恒冒烟测试 |
+| `clifford_test.v` | Clifford 乘法表(四元数/对偶四元数)、CliffordLinear 有限差分梯度、rotor 旋转与 motor 点作用几何正确性、ReprSwitch 数量保真 |
 
 ## 用法
 
@@ -97,6 +99,7 @@ net.load('model.safetensors')
 v run examples/xor          # MLP 学 XOR:loss 0.28 -> 2e-4,权重保存/重载一致
 v run examples/edge_filter  # CNN 学 Sobel 边缘:边缘 F1 0.22 -> 0.97
 v run examples/pretrained   # PyTorch 风格 checkpoint 加载,逐位一致
+v run examples/clifford   # 标量/rotor/motor 复合层训练 + 保存/加载回放
 v run examples/bsds_hed     # 真实任务:BSDS500 边缘似然估计(见下)
 v test .                    # 有限差分梯度校验 + 形状冒烟
 ```

@@ -17,14 +17,17 @@ import mlx
 
 pub type Layer = AvgPool2d
 	| BatchNorm2d
+	| CliffordLinear
 	| Conv2d
 	| Dropout
 	| Flatten
 	| GlobalAvgPool2d
+	| GroupLayer
 	| LayerNorm
 	| Linear
 	| MaxPool2d
 	| ReLU
+	| ReprSwitch
 	| Residual
 	| Sigmoid
 	| Skip
@@ -79,6 +82,15 @@ pub fn (mut l Layer) forward(x mlx.Array) mlx.Array {
 		Skip {
 			return l.forward(x)
 		}
+		CliffordLinear {
+			return l.forward(x)
+		}
+		GroupLayer {
+			return l.forward(x)
+		}
+		ReprSwitch {
+			return l.forward(x)
+		}
 	}
 }
 
@@ -131,6 +143,15 @@ pub fn (mut l Layer) backward(grad mlx.Array) mlx.Array {
 		Skip {
 			return l.backward(grad)
 		}
+		CliffordLinear {
+			return l.backward(grad)
+		}
+		GroupLayer {
+			return l.backward(grad)
+		}
+		ReprSwitch {
+			return l.backward(grad)
+		}
 	}
 }
 
@@ -180,6 +201,15 @@ pub fn (mut l Layer) params() []mlx.Array {
 			return l.params()
 		}
 		Skip {
+			return l.params()
+		}
+		CliffordLinear {
+			return l.params()
+		}
+		GroupLayer {
+			return l.params()
+		}
+		ReprSwitch {
 			return l.params()
 		}
 	}
@@ -234,6 +264,15 @@ pub fn (mut l Layer) grads() []mlx.Array {
 		Skip {
 			return l.grads()
 		}
+		CliffordLinear {
+			return l.grads()
+		}
+		GroupLayer {
+			return l.grads()
+		}
+		ReprSwitch {
+			return l.grads()
+		}
 	}
 }
 
@@ -255,6 +294,9 @@ pub fn (mut l Layer) set_params(ps []mlx.Array) {
 		Flatten { l.set_params(ps) }
 		Residual { l.set_params(ps) }
 		Skip { l.set_params(ps) }
+		CliffordLinear { l.set_params(ps) }
+		GroupLayer { l.set_params(ps) }
+		ReprSwitch { l.set_params(ps) }
 	}
 }
 
@@ -277,6 +319,9 @@ pub fn (mut l Layer) set_training(training bool) {
 		Flatten { l.set_training(training) }
 		Residual { l.set_training(training) }
 		Skip { l.set_training(training) }
+		CliffordLinear { l.set_training(training) }
+		GroupLayer { l.set_training(training) }
+		ReprSwitch { l.set_training(training) }
 	}
 }
 
@@ -298,6 +343,9 @@ pub fn (mut l Layer) save_params(m mlx.MapStringToArray, prefix string) {
 		Flatten { l.save_params(m, prefix) }
 		Residual { l.save_params(m, prefix) }
 		Skip { l.save_params(m, prefix) }
+		CliffordLinear { l.save_params(m, prefix) }
+		GroupLayer { l.save_params(m, prefix) }
+		ReprSwitch { l.save_params(m, prefix) }
 	}
 }
 
@@ -319,5 +367,8 @@ pub fn (mut l Layer) load_params(m mlx.MapStringToArray, prefix string) {
 		Flatten { l.load_params(m, prefix) }
 		Residual { l.load_params(m, prefix) }
 		Skip { l.load_params(m, prefix) }
+		CliffordLinear { l.load_params(m, prefix) }
+		GroupLayer { l.load_params(m, prefix) }
+		ReprSwitch { l.load_params(m, prefix) }
 	}
 }
