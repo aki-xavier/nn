@@ -304,3 +304,122 @@ pub fn (mut l LSTM) load_params(m mlx.MapStringToArray, prefix string) {
 	l.w_hh.eval()
 	l.b.eval()
 }
+
+// ============================================================================
+// GRU: x [n, t, c] -> hidden states [n, t, h].  Gate order: z (update),
+// r (reset), n (candidate).
+// ============================================================================
+
+pub struct GRU {
+pub:
+	input_size  int
+	hidden_size int
+mut:
+	w_iz  mlx.Array // [3h, c]
+	w_hz  mlx.Array // [3h, h]
+	bz    mlx.Array // [3h]
+	x     mlx.Array
+	dw_iz mlx.Array
+	dw_hz mlx.Array
+	dbz   mlx.Array
+}
+
+pub fn new_gru(input_size int, hidden_size int, seed u64) GRU {
+	key := mlx.random_key(seed)
+	defer {
+		key.free()
+	}
+	scale := f32(1.0 / math.sqrt(f64(hidden_size)))
+	return GRU{
+		input_size: input_size
+		hidden_size: hidden_size
+		w_iz: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+			3 * hidden_size,
+			input_size,
+		], .float32, key)
+		w_hz: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+			3 * hidden_size,
+			hidden_size,
+		], .float32, key)
+		bz: mlx.zeros([3 * hidden_size], .float32)
+	}
+}
+
+fn gru_index(hidden int, g int) mlx.Array {
+	lo := g * hidden
+	return mlx.array_i32([]int{len: hidden, init: lo + index}.map(i32(it)), [hidden])
+}
+
+// gru_fwd is the autograd trampoline; xs = [x, w_iz, w_hz, b, cfg].
+fn gru_fwd(xs []mlx.Array) []mlx.Array {
+	return [gru_trace(xs[0], xs[4].data_i32()[0], xs[1], xs[2], xs[3])]
+}
+
+// gru_trace runs the unrolled GRU recurrence:
+// z = σ(·), r = σ(·), n = tanh(·), h' = (1 - z)·n + z·h.
+fn gru_trace(x mlx.Array, hidden int, w_iz mlx.Array, w_hz mlx.Array, bz mlx.Array) mlx.Array {
+	shape := x.shape()
+	n := shape[0]
+	t := shape[1]
+	c := shape[2]
+	mut h := mlx.zeros([n, hidden], .float32)
+	mut outs := []mlx.Array{}
+	iz_t := w_iz.transpose()
+	hz_t := w_hz.transpose()
+	for i in 0 .. t {
+		xt := x.take_axis(mlx.array_i32([i32(i)], [1]), 1).reshape([n, c])
+		gates := xt.matmul(iz_t).add(h.matmul(hz_t)).add(bz)
+		z := gates.take_axis(gru_index(hidden, 0), 1).sigmoid()
+		r := gates.take_axis(gru_index(hidden, 1), 1).sigmoid()
+		n_c := gates.take_axis(gru_index(hidden, 2), 1).tanh()
+		h = mlx.s_mul(mlx.s_rsub(z, 1.0).multiply(n_c), 1.0).add(z.multiply(h))
+		_ = r
+		outs << h.reshape([n, 1, hidden])
+	}
+	return mlx.concatenate(outs, 1)
+}
+
+pub fn (mut l GRU) forward(x mlx.Array) mlx.Array {
+	l.x = x
+	return gru_trace(x, l.hidden_size, l.w_iz, l.w_hz, l.bz)
+}
+
+pub fn (mut l GRU) backward(grad mlx.Array) mlx.Array {
+	cfg := mlx.array_i32([i32(l.hidden_size)], [1])
+	_, vjps := mlx.vjp(gru_fwd, [l.x, l.w_iz, l.w_hz, l.bz, cfg], [grad])
+	l.dw_iz = vjps[1]
+	l.dw_hz = vjps[2]
+	l.dbz = vjps[3]
+	return vjps[0]
+}
+
+pub fn (mut l GRU) params() []mlx.Array {
+	return [l.w_iz, l.w_hz, l.bz]
+}
+
+pub fn (mut l GRU) grads() []mlx.Array {
+	return [l.dw_iz, l.dw_hz, l.dbz]
+}
+
+pub fn (mut l GRU) set_params(ps []mlx.Array) {
+	l.w_iz = ps[0]
+	l.w_hz = ps[1]
+	l.bz = ps[2]
+}
+
+pub fn (mut l GRU) set_training(training bool) {}
+
+pub fn (mut l GRU) save_params(m mlx.MapStringToArray, prefix string) {
+	m.insert('${prefix}.w_iz', l.w_iz)
+	m.insert('${prefix}.w_hz', l.w_hz)
+	m.insert('${prefix}.bz', l.bz)
+}
+
+pub fn (mut l GRU) load_params(m mlx.MapStringToArray, prefix string) {
+	l.w_iz = reshape_to(m.get('${prefix}.w_iz'), [3 * l.hidden_size, l.input_size], '${prefix}.w_iz')
+	l.w_hz = reshape_to(m.get('${prefix}.w_hz'), [3 * l.hidden_size, l.hidden_size], '${prefix}.w_hz')
+	l.bz = reshape_to(m.get('${prefix}.bz'), [3 * l.hidden_size], '${prefix}.bz')
+	l.w_iz.eval()
+	l.w_hz.eval()
+	l.bz.eval()
+}

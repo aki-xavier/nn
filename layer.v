@@ -23,6 +23,7 @@ pub type Layer = AvgPool2d
 	| Dropout
 	| Flatten
 	| GlobalAvgPool2d
+	| GRU
 	| GroupLayer
 	| GroupNorm
 	| LSTM
@@ -67,6 +68,9 @@ pub fn (mut l Layer) forward(x mlx.Array) mlx.Array {
 			return l.forward(x)
 		}
 		GlobalAvgPool2d {
+			return l.forward(x)
+		}
+		GRU {
 			return l.forward(x)
 		}
 		GroupLayer {
@@ -149,6 +153,9 @@ pub fn (mut l Layer) backward(grad mlx.Array) mlx.Array {
 		GlobalAvgPool2d {
 			return l.backward(grad)
 		}
+		GRU {
+			return l.backward(grad)
+		}
 		GroupLayer {
 			return l.backward(grad)
 		}
@@ -227,6 +234,9 @@ pub fn (mut l Layer) params() []mlx.Array {
 			return l.params()
 		}
 		GlobalAvgPool2d {
+			return l.params()
+		}
+		GRU {
 			return l.params()
 		}
 		GroupLayer {
@@ -309,6 +319,9 @@ pub fn (mut l Layer) grads() []mlx.Array {
 		GlobalAvgPool2d {
 			return l.grads()
 		}
+		GRU {
+			return l.grads()
+		}
 		GroupLayer {
 			return l.grads()
 		}
@@ -371,6 +384,7 @@ pub fn (mut l Layer) set_params(ps []mlx.Array) {
 		Dropout { l.set_params(ps) }
 		Flatten { l.set_params(ps) }
 		GlobalAvgPool2d { l.set_params(ps) }
+		GRU { l.set_params(ps) }
 		GroupLayer { l.set_params(ps) }
 		GroupNorm { l.set_params(ps) }
 		LSTM { l.set_params(ps) }
@@ -401,6 +415,7 @@ pub fn (mut l Layer) set_training(training bool) {
 		Dropout { l.set_training(training) }
 		Flatten { l.set_training(training) }
 		GlobalAvgPool2d { l.set_training(training) }
+		GRU { l.set_training(training) }
 		GroupLayer { l.set_training(training) }
 		GroupNorm { l.set_training(training) }
 		LSTM { l.set_training(training) }
@@ -431,6 +446,7 @@ pub fn (mut l Layer) save_params(m mlx.MapStringToArray, prefix string) {
 		Dropout { l.save_params(m, prefix) }
 		Flatten { l.save_params(m, prefix) }
 		GlobalAvgPool2d { l.save_params(m, prefix) }
+		GRU { l.save_params(m, prefix) }
 		GroupLayer { l.save_params(m, prefix) }
 		GroupNorm { l.save_params(m, prefix) }
 		LSTM { l.save_params(m, prefix) }
@@ -461,6 +477,7 @@ pub fn (mut l Layer) load_params(m mlx.MapStringToArray, prefix string) {
 		Dropout { l.load_params(m, prefix) }
 		Flatten { l.load_params(m, prefix) }
 		GlobalAvgPool2d { l.load_params(m, prefix) }
+		GRU { l.load_params(m, prefix) }
 		GroupLayer { l.load_params(m, prefix) }
 		GroupNorm { l.load_params(m, prefix) }
 		LSTM { l.load_params(m, prefix) }

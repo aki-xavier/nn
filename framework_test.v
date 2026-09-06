@@ -91,6 +91,19 @@ fn test_lstm_shape_and_gradient() {
 	fd_check('lstm.w_hh', mut l, x, 1)
 }
 
+fn test_gru_shape_and_gradient() {
+	mut l := Layer(new_gru(6, 5, 4))
+	x := mlx.array_f32([]f32{len: 2 * 3 * 6, init: f32((index * 11) % 7) / 6.0 - 0.4}, [
+		2,
+		3,
+		6,
+	])
+	out := l.forward(x)
+	assert out.shape() == [2, 3, 5]
+	fd_check('gru.w_iz', mut l, x, 0)
+	fd_check('gru.w_hz', mut l, x, 1)
+}
+
 fn test_conv1d_conv3d_gradients() {
 	mut c1 := Layer(new_conv1d(2, 3, 3, 1, 1, 7))
 	x1 := mlx.array_f32([]f32{len: 2 * 6 * 2, init: f32((index * 5) % 9) / 8.0 - 0.4}, [
