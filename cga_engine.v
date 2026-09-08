@@ -4,6 +4,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // bit_count returns the number of set bits.
 fn bit_count(mask int) int {
@@ -93,7 +94,7 @@ fn gen_clifford_table(p int, q int) []f32 {
 // index 16: +1/2).
 fn conformal_point(p mlx.Array) mlx.Array {
 	n := p.dim(0)
-	p2 := mlx.s_mul(p.square().sum_axis(1, false), 0.5) // [n]
+	p2 := mlx_ops.s_mul(p.square().sum_axis(1, false), 0.5) // [n]
 	mut cols := []mlx.Array{cap: 32}
 	cols << mlx.zeros([n, 1], .float32) // 0 scalar
 	cols << p.take_axis(mlx.array_i32([i32(0)], [1]), 1) // 1 (p1)

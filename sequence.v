@@ -4,6 +4,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // sequence.v — sequence layers: multi-head self-attention and LSTM.
 //
@@ -43,7 +44,7 @@ mut:
 }
 
 pub fn new_attention(dim int, heads int, causal bool, seed u64) Attention {
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -52,10 +53,10 @@ pub fn new_attention(dim int, heads int, causal bool, seed u64) Attention {
 		dim: dim
 		heads: heads
 		causal: causal
-		wq: mlx.random_normal([dim, dim], .float32, 0.0, scale, key)
-		wk: mlx.random_normal([dim, dim], .float32, 0.0, scale, key)
-		wv: mlx.random_normal([dim, dim], .float32, 0.0, scale, key)
-		wo: mlx.random_normal([dim, dim], .float32, 0.0, scale, key)
+		wq: mlx_ops.random_normal([dim, dim], .float32, 0.0, scale, key)
+		wk: mlx_ops.random_normal([dim, dim], .float32, 0.0, scale, key)
+		wv: mlx_ops.random_normal([dim, dim], .float32, 0.0, scale, key)
+		wo: mlx_ops.random_normal([dim, dim], .float32, 0.0, scale, key)
 		bq: mlx.zeros([dim], .float32)
 		bk: mlx.zeros([dim], .float32)
 		bv: mlx.zeros([dim], .float32)
@@ -204,7 +205,7 @@ mut:
 }
 
 pub fn new_lstm(input_size int, hidden_size int, seed u64) LSTM {
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -212,11 +213,11 @@ pub fn new_lstm(input_size int, hidden_size int, seed u64) LSTM {
 	return LSTM{
 		input_size: input_size
 		hidden_size: hidden_size
-		w_ih: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+		w_ih: mlx_ops.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
 			4 * hidden_size,
 			input_size,
 		], .float32, key)
-		w_hh: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+		w_hh: mlx_ops.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
 			4 * hidden_size,
 			hidden_size,
 		], .float32, key)
@@ -325,7 +326,7 @@ mut:
 }
 
 pub fn new_gru(input_size int, hidden_size int, seed u64) GRU {
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -333,11 +334,11 @@ pub fn new_gru(input_size int, hidden_size int, seed u64) GRU {
 	return GRU{
 		input_size: input_size
 		hidden_size: hidden_size
-		w_iz: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+		w_iz: mlx_ops.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
 			3 * hidden_size,
 			input_size,
 		], .float32, key)
-		w_hz: mlx.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
+		w_hz: mlx_ops.random_uniform(mlx.f32_scalar(-scale), mlx.f32_scalar(scale), [
 			3 * hidden_size,
 			hidden_size,
 		], .float32, key)
@@ -372,7 +373,7 @@ fn gru_trace(x mlx.Array, hidden int, w_iz mlx.Array, w_hz mlx.Array, bz mlx.Arr
 		z := gates.take_axis(gru_index(hidden, 0), 1).sigmoid()
 		r := gates.take_axis(gru_index(hidden, 1), 1).sigmoid()
 		n_c := gates.take_axis(gru_index(hidden, 2), 1).tanh()
-		h = mlx.s_mul(mlx.s_rsub(z, 1.0).multiply(n_c), 1.0).add(z.multiply(h))
+		h = mlx_ops.s_mul(mlx_ops.s_rsub(z, 1.0).multiply(n_c), 1.0).add(z.multiply(h))
 		_ = r
 		outs << h.reshape([n, 1, hidden])
 	}

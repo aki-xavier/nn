@@ -2,6 +2,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // linear.v — fully connected layer:  y = x·W + b
 //
@@ -24,14 +25,14 @@ mut:
 // and a zero bias.  `seed` makes initialisation reproducible.
 pub fn new_linear(in_features int, out_features int, seed u64) Linear {
 	scale := f32(math.sqrt(2.0 / f64(in_features + out_features)))
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
 	return Linear{
 		in_features: in_features
 		out_features: out_features
-		w: mlx.random_normal([in_features, out_features], .float32, 0.0, scale, key)
+		w: mlx_ops.random_normal([in_features, out_features], .float32, 0.0, scale, key)
 		b: mlx.zeros([1, out_features], .float32)
 	}
 }

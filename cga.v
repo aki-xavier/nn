@@ -4,6 +4,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // cga.v — the conformal group as a layer: Cl(4,1) unit rotors applied by
 // conjugation x -> R·x·R̃.
@@ -57,15 +58,15 @@ fn cga_rotor(params mlx.Array, max_scale f32) mlx.Array {
 	mut p := params
 	if max_scale > 0 {
 		b := math.log(f64(max_scale))
-		p = mlx.s_clip(params, -b, b)
+		p = mlx_ops.s_clip(params, -b, b)
 	}
 	b := bivector_from_params(p)
 	t := table_array_cga()
 	// s = <B B>_0 = T[0][k][j] B_k B_j (scalar part only: l = 0)
 	s := mlx.einsum('lkj,k,j->l', [t, b, b]).take_axis(mlx.array_i32([i32(0)], [1]), 0).reshape([])
-	phi := mlx.s_add(s.abs(), 1e-12).sqrt()
-	k1 := mlx.where(mlx.s_ge(s, 0.0), phi.cosh(), phi.cos())
-	k2 := mlx.where(mlx.s_ge(s, 0.0), phi.sinh().divide(phi), phi.sin().divide(phi))
+	phi := mlx_ops.s_add(s.abs(), 1e-12).sqrt()
+	k1 := mlx.where(mlx_ops.s_ge(s, 0.0), phi.cosh(), phi.cos())
+	k2 := mlx.where(mlx_ops.s_ge(s, 0.0), phi.sinh().divide(phi), phi.sin().divide(phi))
 	bk2 := b.multiply(k2)
 	tail := bk2.take_axis(mlx.array_i32([]int{len: 31, init: index + 1}.map(i32(it)), [
 		31,

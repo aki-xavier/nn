@@ -2,6 +2,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // optimizer.v — parameter update rules.  Optimizers work generically through
 // the Layer params()/grads()/set_params() protocol, so any optimizer can be
@@ -67,7 +68,7 @@ pub fn (o SGD) step(mut layers []Layer) {
 		}
 		mut next := []mlx.Array{cap: ps.len}
 		for j in 0 .. ps.len {
-			next << ps[j].subtract(mlx.s_mul(mlx.s_mul(gs[j], f64(scale)), f64(o.lr)))
+			next << ps[j].subtract(mlx_ops.s_mul(mlx_ops.s_mul(gs[j], f64(scale)), f64(o.lr)))
 		}
 		l.set_params(next)
 	}
@@ -109,16 +110,16 @@ pub fn (mut o Adam) step(mut layers []Layer) {
 		}
 		mut next := []mlx.Array{cap: ps.len}
 		for j in 0 .. ps.len {
-			g := mlx.s_mul(gs[j], f64(scale))
+			g := mlx_ops.s_mul(gs[j], f64(scale))
 			mut mj := o.m[slot + j]
 			mut vj := o.v[slot + j]
-			mj = mlx.s_mul(mj, f64(o.beta1)).add(mlx.s_mul(g, 1.0 - f64(o.beta1)))
-			vj = mlx.s_mul(vj, f64(o.beta2)).add(mlx.s_mul(g.square(), 1.0 - f64(o.beta2)))
+			mj = mlx_ops.s_mul(mj, f64(o.beta1)).add(mlx_ops.s_mul(g, 1.0 - f64(o.beta1)))
+			vj = mlx_ops.s_mul(vj, f64(o.beta2)).add(mlx_ops.s_mul(g.square(), 1.0 - f64(o.beta2)))
 			o.m[slot + j] = mj
 			o.v[slot + j] = vj
-			mhat := mlx.s_mul(mj, 1.0 / bc1)
-			vhat := mlx.s_mul(vj, 1.0 / bc2)
-			p := ps[j].subtract(mlx.s_mul(mhat.divide(vhat.sqrt().add(mlx.f32_scalar(o.eps))), f64(o.lr)))
+			mhat := mlx_ops.s_mul(mj, 1.0 / bc1)
+			vhat := mlx_ops.s_mul(vj, 1.0 / bc2)
+			p := ps[j].subtract(mlx_ops.s_mul(mhat.divide(vhat.sqrt().add(mlx.f32_scalar(o.eps))), f64(o.lr)))
 			next << p
 		}
 		l.set_params(next)

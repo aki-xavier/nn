@@ -1,6 +1,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // activations.v — stateless activation layers.  They cache their input or
 // output during forward so backward can apply the local derivative.
@@ -17,7 +18,7 @@ pub fn (mut a ReLU) forward(x mlx.Array) mlx.Array {
 }
 
 pub fn (mut a ReLU) backward(grad mlx.Array) mlx.Array {
-	mask := mlx.where(mlx.s_gt(a.x, 0.0), mlx.ones_like(a.x), mlx.zeros_like(a.x))
+	mask := mlx.where(mlx_ops.s_gt(a.x, 0.0), mlx.ones_like(a.x), mlx.zeros_like(a.x))
 	return grad.multiply(mask)
 }
 
@@ -50,7 +51,7 @@ pub fn (mut a Sigmoid) forward(x mlx.Array) mlx.Array {
 
 pub fn (mut a Sigmoid) backward(grad mlx.Array) mlx.Array {
 	// f'(x) = f(x) · (1 - f(x))
-	return grad.multiply(a.out.multiply(mlx.s_rsub(a.out, 1.0)))
+	return grad.multiply(a.out.multiply(mlx_ops.s_rsub(a.out, 1.0)))
 }
 
 pub fn (mut a Sigmoid) params() []mlx.Array {
@@ -82,7 +83,7 @@ pub fn (mut a Tanh) forward(x mlx.Array) mlx.Array {
 
 pub fn (mut a Tanh) backward(grad mlx.Array) mlx.Array {
 	// f'(x) = 1 - f(x)²
-	return grad.multiply(mlx.s_rsub(a.out.square(), 1.0))
+	return grad.multiply(mlx_ops.s_rsub(a.out.square(), 1.0))
 }
 
 pub fn (mut a Tanh) params() []mlx.Array {

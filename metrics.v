@@ -2,6 +2,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // metrics.v — evaluation metrics for dense-prediction vision tasks.
 
@@ -25,7 +26,7 @@ pub fn depth_metrics(pred mlx.Array, target mlx.Array) DepthMetrics {
 	abs_rel := diff.abs().divide(target).mean().item_f32()
 	rmse := f32(math.sqrt(f64(diff.square().mean().item_f32())))
 	ratio := pred.divide(target).maximum(target.divide(pred))
-	delta := mlx.s_lt(ratio, 1.25)
+	delta := mlx_ops.s_lt(ratio, 1.25)
 	delta125 := delta.astype(.float32).mean().item_f32()
 	return DepthMetrics{
 		abs_rel: abs_rel
@@ -80,8 +81,8 @@ pub struct EdgeCalculator {
 
 // f1_at thresholds pred at t and returns the F1 of the positive class.
 pub fn (mut c EdgeCalculator) f1_at(pred mlx.Array, target mlx.Array, t f32) f32 {
-	hit := mlx.s_gt(pred, t)
-	is_pos := mlx.s_gt(target, 0.5)
+	hit := mlx_ops.s_gt(pred, t)
+	is_pos := mlx_ops.s_gt(target, 0.5)
 	tp := hit.logical_and(is_pos).astype(.float32).sum().item_f32()
 	fp := hit.logical_and(is_pos.logical_not()).astype(.float32).sum().item_f32()
 	fn_ := hit.logical_not().logical_and(is_pos).astype(.float32).sum().item_f32()

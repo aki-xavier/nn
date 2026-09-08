@@ -2,6 +2,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // nn_test.v — gradient and shape smoke tests.  Conv2d/Linear backward are
 // checked against finite differences; pooling/containers/norm/dropout are
@@ -111,7 +112,7 @@ fn test_checkpoint_loading() {
 		2,
 	])
 	w_ref := w_torch.transpose_axes([0, 2, 3, 1])
-	ref := mlx.conv2d(x, w_ref, 1, 1, 1).add(b.reshape([1, 1, 1, 3]))
+	ref := mlx_ops.conv2d(x, w_ref, 1, 1, 1).add(b.reshape([1, 1, 1, 3]))
 	pred := net.predict(x)
 	assert pred.subtract(ref).abs().max().item_f32() < 1e-5
 }

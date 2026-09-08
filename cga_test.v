@@ -2,6 +2,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // cga_test.v — conformal algebra (Cl(4,1)) validation: blade products,
 // point embedding roundtrip, and rotor geometry (translation / rotation /
@@ -103,7 +104,7 @@ fn test_cga_dilation() {
 		l.set_params([cga_dilation_params(2.0, k)])
 		out := l.forward(conformal_point_pub(p))
 		eu, _ := extract_conformal_pub(out)
-		want := mlx.s_mul(p, 2.0)
+		want := mlx_ops.s_mul(p, 2.0)
 		if eu.subtract(want).abs().max().item_f32() < 1e-2 {
 			ok = true
 		}

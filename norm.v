@@ -3,6 +3,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // norm.v — normalisation layers.  Backward passes run through MLX autograd
 // (vjp): normalisation gradients involve coupled mean/variance terms that
@@ -126,8 +127,8 @@ pub fn (mut l BatchNorm2d) forward(x mlx.Array) mlx.Array {
 		xc := x.subtract(mu)
 		var_ := xc.square().mean_axes([0, 1, 2], true)
 		// update running estimates with detached (stop_gradient) statistics
-		l.running_mu = mlx.s_mul(l.running_mu, f64(1.0 - l.momentum)).add(mlx.s_mul(mu.stop_gradient(), f64(l.momentum)))
-		l.running_var = mlx.s_mul(l.running_var, f64(1.0 - l.momentum)).add(mlx.s_mul(var_.stop_gradient(), f64(l.momentum)))
+		l.running_mu = mlx_ops.s_mul(l.running_mu, f64(1.0 - l.momentum)).add(mlx_ops.s_mul(mu.stop_gradient(), f64(l.momentum)))
+		l.running_var = mlx_ops.s_mul(l.running_var, f64(1.0 - l.momentum)).add(mlx_ops.s_mul(var_.stop_gradient(), f64(l.momentum)))
 		return xc.divide(var_.add(mlx.f32_scalar(l.eps)).sqrt()).multiply(l.w).add(l.b)
 	}
 	return x.subtract(l.running_mu).divide(l.running_var.add(mlx.f32_scalar(l.eps)).sqrt()).multiply(l.w).add(l.b)

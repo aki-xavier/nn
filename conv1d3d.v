@@ -3,6 +3,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // conv1d3d.v — 1D/3D convolution layers with the same vjp-autograd backward
 // pattern as Conv2d.  Layouts follow MLX conventions:
@@ -27,7 +28,7 @@ mut:
 pub fn new_conv1d(in_channels int, out_channels int, kernel_size int, stride int, padding int, seed u64) Conv1d {
 	fan_in := in_channels * kernel_size
 	scale := f32(math.sqrt(2.0 / f64(fan_in)))
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -37,7 +38,7 @@ pub fn new_conv1d(in_channels int, out_channels int, kernel_size int, stride int
 		kernel_size: kernel_size
 		stride: stride
 		padding: padding
-		w: mlx.random_normal([out_channels, kernel_size, in_channels], .float32, 0.0, scale, key)
+		w: mlx_ops.random_normal([out_channels, kernel_size, in_channels], .float32, 0.0, scale, key)
 		b: mlx.zeros([1, 1, out_channels], .float32)
 	}
 }
@@ -46,12 +47,12 @@ pub fn new_conv1d(in_channels int, out_channels int, kernel_size int, stride int
 // [stride, padding, 1].
 fn conv1d_vjp_fn(xs []mlx.Array) []mlx.Array {
 	cfg := xs[2].data_i32()
-	return [mlx.conv1d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
+	return [mlx_ops.conv1d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
 }
 
 pub fn (mut l Conv1d) forward(x mlx.Array) mlx.Array {
 	l.x = x
-	return mlx.conv1d(x, l.w, l.stride, l.padding, 1).add(l.b)
+	return mlx_ops.conv1d(x, l.w, l.stride, l.padding, 1).add(l.b)
 }
 
 pub fn (mut l Conv1d) backward(grad mlx.Array) mlx.Array {
@@ -107,7 +108,7 @@ mut:
 pub fn new_conv3d(in_channels int, out_channels int, kernel_size int, stride int, padding int, seed u64) Conv3d {
 	fan_in := in_channels * kernel_size * kernel_size * kernel_size
 	scale := f32(math.sqrt(2.0 / f64(fan_in)))
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -117,7 +118,7 @@ pub fn new_conv3d(in_channels int, out_channels int, kernel_size int, stride int
 		kernel_size: kernel_size
 		stride: stride
 		padding: padding
-		w: mlx.random_normal([out_channels, kernel_size, kernel_size, kernel_size, in_channels], .float32, 0.0, scale, key)
+		w: mlx_ops.random_normal([out_channels, kernel_size, kernel_size, kernel_size, in_channels], .float32, 0.0, scale, key)
 		b: mlx.zeros([1, 1, 1, 1, out_channels], .float32)
 	}
 }
@@ -125,12 +126,12 @@ pub fn new_conv3d(in_channels int, out_channels int, kernel_size int, stride int
 // conv3d_vjp_fn is the autograd trampoline; xs = [x, w, cfg].
 fn conv3d_vjp_fn(xs []mlx.Array) []mlx.Array {
 	cfg := xs[2].data_i32()
-	return [mlx.conv3d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
+	return [mlx_ops.conv3d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
 }
 
 pub fn (mut l Conv3d) forward(x mlx.Array) mlx.Array {
 	l.x = x
-	return mlx.conv3d(x, l.w, l.stride, l.padding, 1).add(l.b)
+	return mlx_ops.conv3d(x, l.w, l.stride, l.padding, 1).add(l.b)
 }
 
 pub fn (mut l Conv3d) backward(grad mlx.Array) mlx.Array {

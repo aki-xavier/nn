@@ -1,6 +1,7 @@
 module main
 
 import mlx
+import mlx_ops
 import nn
 
 // Simulate loading a pretrained PyTorch-style checkpoint: fabricate a
@@ -11,10 +12,10 @@ import nn
 fn main() {
 	// --- fabricate a torch-convention checkpoint -------------------------
 	// conv1: 1->4 3x3, conv2: 4->2 3x3, weights stored NCHW like PyTorch.
-	w1_torch := mlx.random_normal([4, 1, 3, 3], .float32, 0.0, 0.5, mlx.random_key(101))
-	b1 := mlx.random_normal([4], .float32, 0.0, 0.1, mlx.random_key(102))
-	w2_torch := mlx.random_normal([2, 4, 3, 3], .float32, 0.0, 0.5, mlx.random_key(103))
-	b2 := mlx.random_normal([2], .float32, 0.0, 0.1, mlx.random_key(104))
+	w1_torch := mlx_ops.random_normal([4, 1, 3, 3], .float32, 0.0, 0.5, mlx_ops.random_key(101))
+	b1 := mlx_ops.random_normal([4], .float32, 0.0, 0.1, mlx_ops.random_key(102))
+	w2_torch := mlx_ops.random_normal([2, 4, 3, 3], .float32, 0.0, 0.5, mlx_ops.random_key(103))
+	b2 := mlx_ops.random_normal([2], .float32, 0.0, 0.1, mlx_ops.random_key(104))
 
 	tensors := mlx.new_map_string_to_array()
 	tensors.insert('features.0.weight', w1_torch)
@@ -50,11 +51,11 @@ fn main() {
 	println('loaded into nn network with perm [0, 2, 3, 1]')
 
 	// --- reference computation with raw mlx ops ---------------------------
-	x := mlx.random_uniform(mlx.f32_scalar(0.0), mlx.f32_scalar(1.0), [2, 8, 8, 1], .float32, mlx.random_key(7))
+	x := mlx_ops.random_uniform(mlx.f32_scalar(0.0), mlx.f32_scalar(1.0), [2, 8, 8, 1], .float32, mlx_ops.random_key(7))
 	w1 := w1_torch.transpose_axes([0, 2, 3, 1])
 	w2 := w2_torch.transpose_axes([0, 2, 3, 1])
-	ref := mlx.conv2d(x, w1, 1, 1, 1).add(b1.reshape([1, 1, 1, 4])).maximum(mlx.f32_scalar(0.0))
-	ref2 := mlx.conv2d(ref, w2, 1, 1, 1).add(b2.reshape([1, 1, 1, 2]))
+	ref := mlx_ops.conv2d(x, w1, 1, 1, 1).add(b1.reshape([1, 1, 1, 4])).maximum(mlx.f32_scalar(0.0))
+	ref2 := mlx_ops.conv2d(ref, w2, 1, 1, 1).add(b2.reshape([1, 1, 1, 2]))
 
 	pred := net.predict(x)
 	diff := pred.subtract(ref2).abs().max().item_f32()

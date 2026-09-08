@@ -1,6 +1,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // motor.v — MotorGroupLayer: the group layer hard-wired to SE(3), the
 // production form for rigid-motion tasks.
@@ -69,13 +70,13 @@ fn eps_tensor() []f32 {
 
 // rot_matrix builds the rotation matrix R of a unit (or raw) quaternion.
 fn rot_matrix(q mlx.Array) mlx.Array {
-	s := mlx.s_add(q.square().sum(), 1e-12).sqrt()
+	s := mlx_ops.s_add(q.square().sum(), 1e-12).sqrt()
 	qn := q.divide(s)
 	w := qn.take_axis(mlx.array_i32([i32(0)], [1]), 0)
 	v := qn.take_axis(mlx.array_i32([i32(1), 2, 3], [3]), 0)
 	// einsum 'ijk,k->ij' gives K = -[v]x; negate so K u = v x u and the
 	// standard quaternion rotation matrix holds.
-	k := mlx.s_mul(mlx.einsum('ijk,k->ij', [mlx.array_f32(eps_tensor(), [3, 3, 3]), v]), -1.0)
+	k := mlx_ops.s_mul(mlx.einsum('ijk,k->ij', [mlx.array_f32(eps_tensor(), [3, 3, 3]), v]), -1.0)
 	k2 := mlx.einsum('ij,jk->ik', [k, k])
 	i3 := mlx.array_f32(identity3(), [3, 3])
 	return i3.add(k2.multiply(mlx.f32_scalar(2.0))).add(k.multiply(w.multiply(mlx.f32_scalar(2.0))))
@@ -134,7 +135,7 @@ pub fn (mut l MotorGroupLayer) backward(grad mlx.Array) mlx.Array {
 
 	// dq: chain through the normalised quaternion.
 	r := l.q
-	s := mlx.s_add(r.square().sum(), 1e-12).sqrt().item_f32()
+	s := mlx_ops.s_add(r.square().sum(), 1e-12).sqrt().item_f32()
 	s2 := s * s
 	qn := r.divide(mlx.f32_scalar(s))
 	w := qn.take_axis(mlx.array_i32([i32(0)], [1]), 0) // [1]
@@ -161,10 +162,10 @@ pub fn (mut l MotorGroupLayer) backward(grad mlx.Array) mlx.Array {
 	r0 := r.take_axis(mlx.array_i32([i32(0)], [1]), 0)
 	outer_rv_r := mlx.einsum('i,j->ij', [rv, r])
 	i34 := mlx.array_f32(identity34(), [3, 4])
-	dv_dr := mlx.s_div(i34.subtract(mlx.s_mul(outer_rv_r, 1.0 / s2)), s)
+	dv_dr := mlx_ops.s_div(i34.subtract(mlx_ops.s_mul(outer_rv_r, 1.0 / s2)), s)
 	e0 := mlx.array_f32([f32(1), 0, 0, 0], [1, 4])
 	r0r := r.multiply(r0).reshape([1, 4])
-	dw_dr := mlx.s_div(e0.subtract(mlx.s_mul(r0r, 1.0 / s2)), s)
+	dw_dr := mlx_ops.s_div(e0.subtract(mlx_ops.s_mul(r0r, 1.0 / s2)), s)
 	// contract with the cotangent
 	t1 := mlx.einsum('nc,ncm,mj->j', [gd, jrp_v, dv_dr])
 	t2 := mlx.einsum('nc,nc,sj->j', [gd, jrp_w, dw_dr])

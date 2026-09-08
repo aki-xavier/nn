@@ -1,6 +1,7 @@
 module main
 
 import mlx
+import mlx_ops
 import nn
 
 // Learn edge detection from synthetic data: generate piecewise-constant
@@ -18,20 +19,20 @@ fn sobel_kernel(vertical bool) mlx.Array {
 // make_dataset builds n piecewise-constant 16x16 images (4x4 random blocks
 // upsampled 4x) plus binary edge targets from Sobel magnitude > 1.0.
 fn make_dataset(n int, seed u64) nn.Dataset {
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	zero := mlx.f32_scalar(0.0)
 	one := mlx.f32_scalar(1.0)
-	blocks := mlx.random_uniform(zero, one, [n, 4, 4, 1], .float32, key)
+	blocks := mlx_ops.random_uniform(zero, one, [n, 4, 4, 1], .float32, key)
 	images := blocks.reshape([n, 4, 1, 4, 1, 1]).broadcast_to([n, 4, 4, 4, 4, 1]).reshape([
 		n,
 		16,
 		16,
 		1,
 	])
-	gx := mlx.conv2d(images, sobel_kernel(true), 1, 1, 1)
-	gy := mlx.conv2d(images, sobel_kernel(false), 1, 1, 1)
+	gx := mlx_ops.conv2d(images, sobel_kernel(true), 1, 1, 1)
+	gy := mlx_ops.conv2d(images, sobel_kernel(false), 1, 1, 1)
 	mag := gx.abs().add(gy.abs())
-	edges := mlx.s_gt(mag, 1.0).astype(.float32)
+	edges := mlx_ops.s_gt(mag, 1.0).astype(.float32)
 	return nn.Dataset{
 		x: images
 		y: edges

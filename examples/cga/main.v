@@ -1,6 +1,7 @@
 module main
 
 import mlx
+import mlx_ops
 import nn
 
 // Conformal-inversion toy: random conformal transforms (bounded rotation +
@@ -10,8 +11,8 @@ import nn
 // group layer end to end (training, extraction, save/load).
 
 fn rand_vec(n int, lo f32, hi f32, seed u64, shape []int) []f32 {
-	key := mlx.random_key(seed)
-	u := mlx.random_uniform(mlx.f32_scalar(lo), mlx.f32_scalar(hi), shape, .float32, key)
+	key := mlx_ops.random_key(seed)
+	u := mlx_ops.random_uniform(mlx.f32_scalar(lo), mlx.f32_scalar(hi), shape, .float32, key)
 	return u.data_f32()
 }
 

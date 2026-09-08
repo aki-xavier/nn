@@ -1,6 +1,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // dropout.v — inverted dropout: at training time each element is zeroed with
 // probability p and survivors are scaled by 1/(1-p); at inference time the
@@ -26,16 +27,16 @@ pub fn (mut l Dropout) forward(x mlx.Array) mlx.Array {
 		return x
 	}
 	keep := mlx.f32_scalar(1.0 - l.p)
-	key := mlx.no_key()
-	l.mask = mlx.random_bernoulli(keep, x.shape(), key)
-	return mlx.s_div(x.multiply(l.mask), f64(1.0 - l.p))
+	key := mlx_ops.no_key()
+	l.mask = mlx_ops.random_bernoulli(keep, x.shape(), key)
+	return mlx_ops.s_div(x.multiply(l.mask), f64(1.0 - l.p))
 }
 
 pub fn (mut l Dropout) backward(grad mlx.Array) mlx.Array {
 	if !l.training || l.p <= 0.0 {
 		return grad
 	}
-	return mlx.s_div(grad.multiply(l.mask), f64(1.0 - l.p))
+	return mlx_ops.s_div(grad.multiply(l.mask), f64(1.0 - l.p))
 }
 
 pub fn (mut l Dropout) params() []mlx.Array {

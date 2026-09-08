@@ -1,6 +1,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // loss.v — loss functions.  `loss` returns the scalar loss and `gradient`
 // returns d(loss)/d(pred), the seed for backpropagation.
@@ -74,7 +75,7 @@ pub fn (mut l MSELoss) loss(pred mlx.Array, target mlx.Array) mlx.Array {
 
 pub fn (mut l MSELoss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
 	n := f64(pred.size())
-	return mlx.s_mul(pred.subtract(target), 2.0 / n)
+	return mlx_ops.s_mul(pred.subtract(target), 2.0 / n)
 }
 
 // SoftmaxCrossEntropyLoss combines a softmax over the last axis of `pred`
@@ -85,13 +86,13 @@ pub struct SoftmaxCrossEntropyLoss {}
 pub fn (mut l SoftmaxCrossEntropyLoss) loss(pred mlx.Array, target mlx.Array) mlx.Array {
 	batch := f64(pred.shape()[0])
 	p := pred.softmax_axis(-1, false)
-	return mlx.s_mul(target.multiply(p.log()).sum(), -1.0 / batch)
+	return mlx_ops.s_mul(target.multiply(p.log()).sum(), -1.0 / batch)
 }
 
 pub fn (mut l SoftmaxCrossEntropyLoss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
 	batch := f64(pred.shape()[0])
 	p := pred.softmax_axis(-1, false)
-	return mlx.s_mul(p.subtract(target), 1.0 / batch)
+	return mlx_ops.s_mul(p.subtract(target), 1.0 / batch)
 }
 
 // L1Loss is the mean absolute error; common for dense regression (depth).
@@ -103,8 +104,8 @@ pub fn (mut l L1Loss) loss(pred mlx.Array, target mlx.Array) mlx.Array {
 
 pub fn (mut l L1Loss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
 	n := f64(pred.size())
-	sign := mlx.where(mlx.s_gt(pred.subtract(target), 0.0), mlx.ones_like(pred), mlx.s_mul(mlx.ones_like(pred), -1.0))
-	return mlx.s_mul(sign, 1.0 / n)
+	sign := mlx.where(mlx_ops.s_gt(pred.subtract(target), 0.0), mlx.ones_like(pred), mlx_ops.s_mul(mlx.ones_like(pred), -1.0))
+	return mlx_ops.s_mul(sign, 1.0 / n)
 }
 
 // BerHuLoss (reverse Huber) is quadratic for |e| <= c and linear beyond it,
@@ -118,9 +119,9 @@ pub:
 pub fn (mut l BerHuLoss) loss(pred mlx.Array, target mlx.Array) mlx.Array {
 	e := pred.subtract(target).abs()
 	c := l.threshold(e)
-	small := mlx.s_mul(e.square(), 0.5 / c)
-	big := mlx.s_rsub(mlx.s_mul(e, 1.0), c / 2.0)
-	return mlx.where(mlx.s_le(e, c), small, big).mean()
+	small := mlx_ops.s_mul(e.square(), 0.5 / c)
+	big := mlx_ops.s_rsub(mlx_ops.s_mul(e, 1.0), c / 2.0)
+	return mlx.where(mlx_ops.s_le(e, c), small, big).mean()
 }
 
 pub fn (mut l BerHuLoss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
@@ -128,9 +129,9 @@ pub fn (mut l BerHuLoss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
 	e := diff.abs()
 	c := l.threshold(e)
 	n := f64(pred.size())
-	small := mlx.s_mul(diff, 1.0 / c)
-	big := mlx.where(mlx.s_gt(diff, 0.0), mlx.ones_like(diff), mlx.s_mul(mlx.ones_like(diff), -1.0))
-	return mlx.s_mul(mlx.where(mlx.s_le(e, c), small, big), 1.0 / n)
+	small := mlx_ops.s_mul(diff, 1.0 / c)
+	big := mlx.where(mlx_ops.s_gt(diff, 0.0), mlx.ones_like(diff), mlx_ops.s_mul(mlx.ones_like(diff), -1.0))
+	return mlx_ops.s_mul(mlx.where(mlx_ops.s_le(e, c), small, big), 1.0 / n)
 }
 
 // threshold returns c: the configured value, or 0.2·max|e| when c == 0.
@@ -152,7 +153,7 @@ pub fn (mut l ScaleInvariantLoss) loss(pred mlx.Array, target mlx.Array) mlx.Arr
 	n := f64(pred.size())
 	e := pred.subtract(target)
 	mse := e.square().mean()
-	scale := mlx.s_mul(e.sum().square(), f64(l.lambda) / (n * n))
+	scale := mlx_ops.s_mul(e.sum().square(), f64(l.lambda) / (n * n))
 	return mse.subtract(scale)
 }
 
@@ -160,7 +161,7 @@ pub fn (mut l ScaleInvariantLoss) gradient(pred mlx.Array, target mlx.Array) mlx
 	n := f64(pred.size())
 	e := pred.subtract(target)
 	sum_e := e.sum().item_f32()
-	return mlx.s_mul(e.subtract(mlx.full_value(pred.shape(), f32(f64(l.lambda) * f64(sum_e) / n), .float32)), 2.0 / n)
+	return mlx_ops.s_mul(e.subtract(mlx.full_value(pred.shape(), f32(f64(l.lambda) * f64(sum_e) / n), .float32)), 2.0 / n)
 }
 
 // WeightedBCELoss is binary cross entropy over probabilities in (0, 1) with
@@ -173,16 +174,16 @@ pub:
 }
 
 pub fn (mut l WeightedBCELoss) loss(pred mlx.Array, target mlx.Array) mlx.Array {
-	p := mlx.s_clip(pred, f64(l.eps), 1.0 - f64(l.eps))
-	pos := mlx.s_mul(target.multiply(p.log()), -f64(l.w_pos))
-	neg := mlx.s_rsub(target, 1.0).multiply(mlx.s_rsub(p, 1.0).log())
+	p := mlx_ops.s_clip(pred, f64(l.eps), 1.0 - f64(l.eps))
+	pos := mlx_ops.s_mul(target.multiply(p.log()), -f64(l.w_pos))
+	neg := mlx_ops.s_rsub(target, 1.0).multiply(mlx_ops.s_rsub(p, 1.0).log())
 	return pos.subtract(neg).mean()
 }
 
 pub fn (mut l WeightedBCELoss) gradient(pred mlx.Array, target mlx.Array) mlx.Array {
-	p := mlx.s_clip(pred, f64(l.eps), 1.0 - f64(l.eps))
+	p := mlx_ops.s_clip(pred, f64(l.eps), 1.0 - f64(l.eps))
 	n := f64(pred.size())
-	pos := mlx.s_mul(target.divide(p), -f64(l.w_pos))
-	neg := mlx.s_rsub(target, 1.0).divide(mlx.s_rsub(p, 1.0))
-	return mlx.s_mul(pos.add(neg), 1.0 / n)
+	pos := mlx_ops.s_mul(target.divide(p), -f64(l.w_pos))
+	neg := mlx_ops.s_rsub(target, 1.0).divide(mlx_ops.s_rsub(p, 1.0))
+	return mlx_ops.s_mul(pos.add(neg), 1.0 / n)
 }

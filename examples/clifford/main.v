@@ -1,6 +1,7 @@
 module main
 
 import mlx
+import mlx_ops
 import nn
 
 // End-to-end smoke test for the scalar/rotor/motor layers: random motors act
@@ -10,9 +11,9 @@ import nn
 
 fn random_motors(n int, seed u64) [][6]f32 {
 	mut out := [][6]f32{len: n}
-	key := mlx.random_key(seed)
-	rot := mlx.random_uniform(mlx.f32_scalar(-1.0), mlx.f32_scalar(1.0), [n, 3], .float32, key)
-	trans := mlx.random_uniform(mlx.f32_scalar(-0.5), mlx.f32_scalar(0.5), [n, 3], .float32, key)
+	key := mlx_ops.random_key(seed)
+	rot := mlx_ops.random_uniform(mlx.f32_scalar(-1.0), mlx.f32_scalar(1.0), [n, 3], .float32, key)
+	trans := mlx_ops.random_uniform(mlx.f32_scalar(-0.5), mlx.f32_scalar(0.5), [n, 3], .float32, key)
 	rd := rot.data_f32()
 	td := trans.data_f32()
 	for i in 0 .. n {

@@ -1,6 +1,7 @@
 module nn
 
 import mlx
+import mlx_ops
 
 // pool.v — pooling and upsampling layers for NHWC tensors.
 //
@@ -108,7 +109,7 @@ pub fn (mut l AvgPool2d) forward(x mlx.Array) mlx.Array {
 }
 
 pub fn (mut l AvgPool2d) backward(grad mlx.Array) mlx.Array {
-	return mlx.s_mul(grad_upsample(grad, l.shape, l.kernel), 1.0 / f64(l.kernel * l.kernel))
+	return mlx_ops.s_mul(grad_upsample(grad, l.shape, l.kernel), 1.0 / f64(l.kernel * l.kernel))
 }
 
 pub fn (mut l AvgPool2d) params() []mlx.Array {
@@ -141,7 +142,7 @@ pub fn (mut l GlobalAvgPool2d) forward(x mlx.Array) mlx.Array {
 
 pub fn (mut l GlobalAvgPool2d) backward(grad mlx.Array) mlx.Array {
 	hw := f64(l.shape[1] * l.shape[2])
-	return mlx.s_mul(grad.broadcast_to(l.shape), 1.0 / hw)
+	return mlx_ops.s_mul(grad.broadcast_to(l.shape), 1.0 / hw)
 }
 
 pub fn (mut l GlobalAvgPool2d) params() []mlx.Array {

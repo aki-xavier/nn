@@ -4,6 +4,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // clifford.v — scalar / rotor / motor representation arena.
 //
@@ -183,7 +184,7 @@ mut:
 
 pub fn new_clifford_linear(repr Repr, in_dim int, out_dim int, seed u64) CliffordLinear {
 	r := repr.dim()
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -192,7 +193,7 @@ pub fn new_clifford_linear(repr Repr, in_dim int, out_dim int, seed u64) Cliffor
 		repr: repr
 		in_dim: in_dim
 		out_dim: out_dim
-		w: mlx.random_normal([out_dim, in_dim, r], .float32, 0.0, scale, key)
+		w: mlx_ops.random_normal([out_dim, in_dim, r], .float32, 0.0, scale, key)
 		b: mlx.zeros([out_dim, r], .float32)
 	}
 }
@@ -285,7 +286,7 @@ pub fn new_group_layer(repr Repr) GroupLayer {
 // norm is smoothed as theta = sqrt(|x|² + eps²) so gradients stay bounded at
 // the origin (|x| itself is not differentiable there).
 fn build_element(repr Repr, rotvec mlx.Array, trans mlx.Array) mlx.Array {
-	theta := mlx.s_add(rotvec.square().sum(), 1e-12).sqrt()
+	theta := mlx_ops.s_add(rotvec.square().sum(), 1e-12).sqrt()
 	h := theta.multiply(mlx.f32_scalar(0.5))
 	s := h.sin()
 	c := h.cos()

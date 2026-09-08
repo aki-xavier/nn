@@ -4,6 +4,7 @@ module nn
 
 import math
 import mlx
+import mlx_ops
 
 // conv2d.v — 2D convolution layer (NHWC input, weight [out, k, k, in]).
 //
@@ -31,7 +32,7 @@ mut:
 pub fn new_conv2d(in_channels int, out_channels int, kernel_size int, stride int, padding int, seed u64) Conv2d {
 	fan_in := in_channels * kernel_size * kernel_size
 	scale := f32(math.sqrt(2.0 / f64(fan_in)))
-	key := mlx.random_key(seed)
+	key := mlx_ops.random_key(seed)
 	defer {
 		key.free()
 	}
@@ -41,7 +42,7 @@ pub fn new_conv2d(in_channels int, out_channels int, kernel_size int, stride int
 		kernel_size: kernel_size
 		stride: stride
 		padding: padding
-		w: mlx.random_normal([out_channels, kernel_size, kernel_size, in_channels], .float32, 0.0, scale, key)
+		w: mlx_ops.random_normal([out_channels, kernel_size, kernel_size, in_channels], .float32, 0.0, scale, key)
 		b: mlx.zeros([1, 1, 1, out_channels], .float32)
 	}
 }
@@ -51,12 +52,12 @@ pub fn new_conv2d(in_channels int, out_channels int, kernel_size int, stride int
 // config travels as an array because the trampoline cannot capture state.
 fn conv2d_vjp_fn(xs []mlx.Array) []mlx.Array {
 	cfg := xs[2].data_i32()
-	return [mlx.conv2d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
+	return [mlx_ops.conv2d(xs[0], xs[1], cfg[0], cfg[1], cfg[2])]
 }
 
 pub fn (mut l Conv2d) forward(x mlx.Array) mlx.Array {
 	l.x = x
-	return mlx.conv2d(x, l.w, l.stride, l.padding, 1).add(l.b)
+	return mlx_ops.conv2d(x, l.w, l.stride, l.padding, 1).add(l.b)
 }
 
 pub fn (mut l Conv2d) backward(grad mlx.Array) mlx.Array {
