@@ -53,6 +53,7 @@ flowchart TD
 | `clifford.v` | 标量/rotor/motor **cga(Cl(4,1), 32 维)** 表示竞技场:`CliffordLinear`(自由 multivector 线性层)、`GroupLayer`(指数映射参数化的单位 rotor/motor 共轭层)、`ReprSwitch`(表示间保值嵌入);统一乘法表驱动,`repr` 字段切换维度 1/4/8/32 |
 | `cga_engine.v` | 通用 Cl(p,q) 引擎:blade 乘积(位掩码 + 度量签名)生成结构常数表;CGA 点嵌入 `conformal_point_pub`/`extract_conformal_pub`(λ = x[16]−x[8]) |
 | `cga.v` | `CGAGroupLayer`:共形群层(bivector 10 维 exp-map,两分支 cosh/cos,**缩放生成元裁剪到 ±log(max_scale)**);构建器 `cga_translation/rotation/dilation_params` |
+| `logic.v` | `LogicGateLayer`:可微逻辑门网络——每个神经元随机/覆盖式连线取两个输入,对 16 种布尔门做 softmax 选择(训练用真值表多线性松弛),`hard_forward` 离散化为精确布尔电路;`logic_discretized_forward`/`logic_gate_names` 读出学到的电路;含 `residual` 直通与覆盖式连线(避免窄网丢输入) |
 | `motor.v` | `MotorGroupLayer`:写死 SE(3) 的生产版 group 层——原始四元数归一化参数化(无指数映射奇异性),**解析梯度**(无 vjp/乘法表),点作用 `1+εP ↦ 1+ε(RP+t)` |
 | `nn_test.v` | 有限差分梯度校验(Conv2d/Linear)、形状与梯度守恒冒烟测试 |
 | `clifford_test.v` | Clifford 乘法表(四元数/对偶四元数)、CliffordLinear 有限差分梯度、rotor 旋转与 motor 点作用几何正确性、ReprSwitch 数量保真 |
@@ -113,6 +114,7 @@ v run examples/pretrained   # PyTorch 风格 checkpoint 加载,逐位一致
 v run examples/clifford   # 标量/rotor/motor 复合层训练 + 保存/加载回放
 v run examples/cga        # 共形变换反演(Cl4,1 群层 + 自由 CGA 层),loss -> 8e-4
 v run examples/compare    # 群层混合 vs 全自由层对比(见下)
+v run examples/logic      # 可微逻辑门:XOR/AND/MAJ3 学习 + 离散化为精确布尔电路
 v run examples/bsds_hed     # 真实任务:BSDS500 边缘似然估计(见下)
 v test .                    # 有限差分梯度校验 + 形状冒烟
 ```
@@ -136,6 +138,13 @@ v test .                    # 有限差分梯度校验 + 形状冒烟
 | B 纯自由 | **0.082** | 1.55 | 自由容量直接记忆样本级逆映射,更好 |
 
 结论:群层的价值依赖「任务群匹配」(全体样本共享同一变换群,等变性才有意义);**每样本独立变换、无共享对称性**的任务上,纯自由层占优。这与此前文献结论一致,且本实验可复现。
+
+## 逻辑门网络(examples/logic)
+
+可微逻辑门层训练布尔函数,再把 argmax 门离散化读出精确电路(XOR/AND/MAJ3 均验证:soft 误差 ≤0.011,离散化后逐位精确)。实现中踩到并修正的两个 LGN 经典陷阱,均已在代码注释与 API 中处理:
+
+1. **均匀初始化死锁**:门 logits 全零时 16 门等权,层输出恒为 0.5、输入梯度恰为 0,训练永久停滞;必须在构造时随机初始化 logits。
+2. **随机连线丢输入**:窄网中单个输出门的 2 根随机线可能完全错过某个输入,网络只能学出"只依赖一个输入"的常数解;需用 `residual` 直通线(输出拼接输入)与覆盖式连线(`new_logic_gate_layer_covered`,保证相邻输入对可达)。
 
 ## 已知约束(当前 V 0.5.2)
 - 本版本 V 编译器存在解析 bug(已报 [vlang/v#28339](https://github.com/vlang/v/issues/28339)):**入口 `module main` 文件里不能声明任何方法**,否则 import 含 C 指令的模块(mlx)时报 `expecting type declaration`。逻辑全部写在 `module nn`(被 import 的依赖模块)里即可完全规避;框架内部因此用 sum type + match 代替 interface,方法统一 `mut` 接收者。新增层类型时在 `layer.v` 的 sum type 和各 match 分支注册。

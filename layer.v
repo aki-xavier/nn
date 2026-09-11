@@ -16,6 +16,7 @@ import mlx
 
 pub type Layer = AvgPool2d
 	| BatchNorm2d
+	| LogicGateLayer
 	| CGAGroupLayer
 	| CliffordLinear
 	| Conv1d
@@ -48,6 +49,9 @@ pub fn (mut l Layer) forward(x mlx.Array) mlx.Array {
 			return l.forward(x)
 		}
 		BatchNorm2d {
+			return l.forward(x)
+		}
+		LogicGateLayer {
 			return l.forward(x)
 		}
 		CGAGroupLayer {
@@ -136,6 +140,9 @@ pub fn (mut l Layer) backward(grad mlx.Array) mlx.Array {
 		BatchNorm2d {
 			return l.backward(grad)
 		}
+		LogicGateLayer {
+			return l.backward(grad)
+		}
 		CGAGroupLayer {
 			return l.backward(grad)
 		}
@@ -220,6 +227,9 @@ pub fn (mut l Layer) params() []mlx.Array {
 			return l.params()
 		}
 		BatchNorm2d {
+			return l.params()
+		}
+		LogicGateLayer {
 			return l.params()
 		}
 		CGAGroupLayer {
@@ -308,6 +318,9 @@ pub fn (mut l Layer) grads() []mlx.Array {
 		BatchNorm2d {
 			return l.grads()
 		}
+		LogicGateLayer {
+			return l.grads()
+		}
 		CGAGroupLayer {
 			return l.grads()
 		}
@@ -390,6 +403,7 @@ pub fn (mut l Layer) set_params(ps []mlx.Array) {
 	match mut l {
 		AvgPool2d { l.set_params(ps) }
 		BatchNorm2d { l.set_params(ps) }
+		LogicGateLayer { l.set_params(ps) }
 		CGAGroupLayer { l.set_params(ps) }
 		CliffordLinear { l.set_params(ps) }
 		Conv1d { l.set_params(ps) }
@@ -422,6 +436,7 @@ pub fn (mut l Layer) set_training(training bool) {
 	match mut l {
 		AvgPool2d { l.set_training(training) }
 		BatchNorm2d { l.set_training(training) }
+		LogicGateLayer { l.set_training(training) }
 		CGAGroupLayer { l.set_training(training) }
 		CliffordLinear { l.set_training(training) }
 		Conv1d { l.set_training(training) }
@@ -454,6 +469,7 @@ pub fn (mut l Layer) save_params(m mlx.MapStringToArray, prefix string) {
 	match mut l {
 		AvgPool2d { l.save_params(m, prefix) }
 		BatchNorm2d { l.save_params(m, prefix) }
+		LogicGateLayer { l.save_params(m, prefix) }
 		CGAGroupLayer { l.save_params(m, prefix) }
 		CliffordLinear { l.save_params(m, prefix) }
 		Conv1d { l.save_params(m, prefix) }
@@ -486,6 +502,7 @@ pub fn (mut l Layer) load_params(m mlx.MapStringToArray, prefix string) {
 	match mut l {
 		AvgPool2d { l.load_params(m, prefix) }
 		BatchNorm2d { l.load_params(m, prefix) }
+		LogicGateLayer { l.load_params(m, prefix) }
 		CGAGroupLayer { l.load_params(m, prefix) }
 		CliffordLinear { l.load_params(m, prefix) }
 		Conv1d { l.load_params(m, prefix) }
